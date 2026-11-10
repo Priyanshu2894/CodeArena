@@ -17,3 +17,4 @@ src/generated/
 
 # Operating system files
 .DS_Store
+/src/generated/prisma

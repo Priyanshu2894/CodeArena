@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum SubmissionLanguage {
+  JAVASCRIPT
+  PYTHON
+  JAVA
+  CPP
+}
+
+enum SubmissionStatus {
+  PENDING
+  PROCESSING
+  ACCEPTED
+  WRONG_ANSWER
+  COMPILATION_ERROR
+  RUNTIME_ERROR
+  TIME_LIMIT_EXCEEDED
+  MEMORY_LIMIT_EXCEEDED
+  INTERNAL_ERROR
+}
+
+enum TestResultStatus {
+  PENDING
+  ACCEPTED
+  WRONG_ANSWER
+  COMPILATION_ERROR
+  RUNTIME_ERROR
+  TIME_LIMIT_EXCEEDED
+  MEMORY_LIMIT_EXCEEDED
+  INTERNAL_ERROR
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String?  @map("password_hash")
+  role         UserRole @default(USER)
+  avatarUrl    String?  @map("avatar_url")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdProblems Problem[]    @relation("ProblemCreator")
+  submissions     Submission[]
+
+  @@map("users")
+}
+
+model Problem {
+  id             String     @id @default(uuid()) @db.Uuid
+  title          String
+  slug           String     @unique
+  description    String
+  difficulty     Difficulty
+  constraints    String
+  inputFormat    String     @map("input_format")
+  outputFormat   String     @map("output_format")
+  createdById    String     @map("created_by_id") @db.Uuid
+  isPublished    Boolean    @default(false) @map("is_published")
+  judgingVersion Int        @default(1) @map("judging_version")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdBy   User              @relation("ProblemCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  categories  ProblemCategory[]
+  testCases   TestCase[]
+  submissions Submission[]
+
+  @@index([createdById])
+  @@index([difficulty, isPublished])
+  @@map("problems")
+}
+
+model Category {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+  slug String @unique
+
+  problems ProblemCategory[]
+
+  @@map("categories")
+}
+
+model ProblemCategory {
+  problemId  String @map("problem_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  problem  Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([problemId, categoryId])
+  @@index([categoryId])
+  @@map("problem_categories")
+}
+
+model TestCase {
+  id             String  @id @default(uuid()) @db.Uuid
+  problemId      String  @map("problem_id") @db.Uuid
+  input          String
+  expectedOutput String  @map("expected_output")
+  isSample       Boolean @default(false) @map("is_sample")
+  position       Int
+  explanation    String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  submissionTestResults SubmissionTestResult[]
+
+  @@unique([problemId, position])
+  @@map("test_cases")
+}
+
+model Submission {
+  id                  String             @id @default(uuid()) @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  problemId           String             @map("problem_id") @db.Uuid
+  language            SubmissionLanguage
+  sourceCode          String             @map("source_code")
+  status              SubmissionStatus   @default(PENDING)
+  executionTimeMs     Int?               @map("execution_time_ms")
+  memoryUsedKb        Int?               @map("memory_used_kb")
+  problemVersion      Int                @default(1) @map("problem_version")
+  executionProvider   String?            @map("execution_provider")
+  externalExecutionId String?            @map("external_execution_id")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Restrict)
+
+  testResults SubmissionTestResult[]
+
+  @@index([userId, createdAt])
+  @@index([problemId, createdAt])
+  @@map("submissions")
+}
+
+model SubmissionTestResult {
+  id               String           @id @default(uuid()) @db.Uuid
+  submissionId     String           @map("submission_id") @db.Uuid
+  testCaseId       String?          @map("test_case_id") @db.Uuid
+  testCasePosition Int              @map("test_case_position")
+  status           TestResultStatus
+  executionTimeMs  Int?             @map("execution_time_ms")
+  memoryUsedKb     Int?             @map("memory_used_kb")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testCase   TestCase?  @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+
+  @@unique([submissionId, testCasePosition])
+  @@index([testCaseId])
+  @@map("submission_test_results")
+}
