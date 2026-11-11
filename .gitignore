@@ -18,3 +18,10 @@ src/generated/
 # Operating system files
 .DS_Store
 /src/generated/prisma
+
+# Authentication cookies and tokens
+cookies.txt
+
+# Local AI/editor configuration
+.claude/
+.windsurf/

@@ -25,6 +25,24 @@ const envSchema = z.object({
           "DATABASE_URL must use the postgresql:// or postgres:// protocol",
       }
     ),
+
+  // JWT access token configuration
+  ACCESS_TOKEN_SECRET: z
+    .string()
+    .min(32, "ACCESS_TOKEN_SECRET must be at least 32 characters"),
+
+  ACCESS_TOKEN_EXPIRES_IN: z
+    .string()
+    .default("15m"),
+
+  // JWT refresh token configuration
+  REFRESH_TOKEN_SECRET: z
+    .string()
+    .min(32, "REFRESH_TOKEN_SECRET must be at least 32 characters"),
+
+  REFRESH_TOKEN_EXPIRES_IN: z
+    .string()
+    .default("7d"),
 });
 
 const result = envSchema.safeParse(process.env);

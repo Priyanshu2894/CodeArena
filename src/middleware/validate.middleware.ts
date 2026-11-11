@@ -1,4 +1,3 @@
-
 import type { RequestHandler } from "express";
 import { z } from "zod";
 import { AppError } from "../errors/app-error.js";
@@ -16,6 +15,9 @@ export const validateMiddleware = (schema: z.ZodType): RequestHandler => {
         new AppError(`Validation failed: ${errorMessage}`, 400)
       );
     }
+
+    // Replace request body with validated and transformed data
+    req.body = result.data;
 
     next();
   };
